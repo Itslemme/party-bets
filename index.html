@@ -4,17 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Party Bets</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23c084fc'/%3E%3Cstop offset='100%25' stop-color='%236d28d9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='120' height='120' rx='24' fill='%230a0714'/%3E%3Cellipse cx='61' cy='36' rx='30' ry='11' fill='none' stroke='%23f5f0ff' stroke-width='6'/%3E%3Cpath d='M32 36 L39 90 Q61 98 83 90 L90 36' fill='url(%23g)' stroke='%237c3aed' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M67 46 L49 74 L59 74 L54 96 L78 66 L66 66 Z' fill='%23f5f0ff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:#080810; --surface:#0f0f1e; --surface2:#171728; --border:#22223a;
-  --accent:#7c4dff; --accent-h:#9566ff; --text:#ddddf0; --muted:#60608a;
+  --bg:#0a0714; --surface:#120c22; --surface2:#1c1230; --border:#2c1f4a;
+  --accent:#8b5cf6; --accent-h:#a375ff; --accent2:#c026d3; --text:#e5defc; --muted:#7a6ba3;
   --yes:#1faa6a; --yes-bg:#081a12; --yes-border:#112b1e; --yes-active:#24c97c;
   --no:#aa2020; --no-bg:#1a0808; --no-border:#2b1111; --no-active:#cc2f2f;
   --chip:#c8a44a; --danger:#c42828; --r:12px; --r-sm:8px;
+  --glow: 0 0 24px rgba(139,92,246,.45);
 }
 html,body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
 #app { max-width:480px; min-height:100vh; margin:0 auto; }
@@ -35,8 +37,8 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 
 .btn { display:block; width:100%; padding:14px 20px; border:none; border-radius:var(--r); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; text-align:center; transition:opacity .15s,background .15s; letter-spacing:.1px; line-height:1; }
 .btn:disabled { opacity:.35; cursor:not-allowed; }
-.btn-primary { background:var(--accent); color:#fff; }
-.btn-primary:hover:not(:disabled) { background:var(--accent-h); }
+.btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; box-shadow:var(--glow); }
+.btn-primary:hover:not(:disabled) { background:linear-gradient(135deg,var(--accent-h),var(--accent2)); }
 .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
 .btn-secondary:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
 .btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
@@ -65,8 +67,9 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .tag-star { background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:0 2px; line-height:1; }
 .tag-star:hover { color:var(--chip); }
 
-.hero { padding:44px 20px 28px; }
-.hero h1 { font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1; }
+.hero { padding:40px 20px 28px; }
+.hero-logo { width:76px; height:76px; margin-bottom:14px; filter:drop-shadow(0 0 18px rgba(139,92,246,.55)); }
+.hero h1 { font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1; background:linear-gradient(135deg,#f2ecff,var(--accent-h) 60%,var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .hero p { color:var(--muted); font-size:15px; margin-top:8px; }
 .section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:12px; }
 
@@ -88,7 +91,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .event-list-item-name { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .event-list-item-sub { font-size:12px; color:var(--muted); margin-top:2px; }
 .event-badge { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:.5px; text-transform:uppercase; flex-shrink:0; }
-.badge-preset { background:rgba(124,77,255,.14); color:var(--accent); }
+.badge-preset { background:rgba(139,92,246,.14); color:var(--accent); }
 .badge-custom { background:rgba(200,164,74,.14); color:var(--chip); }
 .evt-edit-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px; flex-shrink:0; line-height:1; transition:color .15s; }
 .evt-edit-btn:hover { color:var(--accent); }
@@ -100,7 +103,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .play-title { font-weight:700; font-size:18px; margin-bottom:12px; }
 .p-bar { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; padding-bottom:14px; max-height:168px; overflow-y:auto; }
 .p-chip { padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--r-sm); cursor:pointer; text-align:left; transition:border-color .15s; }
-.p-chip.active { border-color:var(--accent); }
+.p-chip.active { border-color:var(--accent); box-shadow:0 0 12px rgba(139,92,246,.35); }
 .p-chip-name { font-size:13px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .p-chip.active .p-chip-name { color:var(--accent); }
 .p-chip-bal { font-size:11px; color:var(--muted); margin-top:3px; }
@@ -138,7 +141,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .mark-btn.no.sel { background:var(--no); border-color:var(--no); color:#fff; }
 
 .results-hdr { padding:36px 20px 16px; text-align:center; }
-.results-hdr h1 { font-size:30px; font-weight:800; letter-spacing:-.5px; }
+.results-hdr h1 { font-size:30px; font-weight:800; letter-spacing:-.5px; background:linear-gradient(135deg,#f2ecff,var(--accent-h) 60%,var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .results-hdr p { color:var(--muted); font-size:14px; margin-top:6px; }
 .res-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:8px; }
 .res-item.gold { border-color:rgba(240,196,60,.25); background:rgba(240,196,60,.05); }
@@ -310,11 +313,15 @@ if(tg){
   });
 }
 
-// Dynamic parimutuel coefficient (pool-ratio based), capped at ×5
+// Dynamic parimutuel coefficient (pool-ratio based), floored at ×1.05, capped at ×5
+const MIN_COEFF=1.05;
 function coeffs(evt){
   const y=evt.bets.yes||0, n=evt.bets.no||0, tot=y+n;
   if(tot===0) return { yes:Math.min(5,1/evt.baseProbYes), no:Math.min(5,1/(1-evt.baseProbYes)) };
-  return { yes:y>0?Math.min(5,tot/y):5, no:n>0?Math.min(5,tot/n):5 };
+  return {
+    yes:y>0?Math.min(5,Math.max(MIN_COEFF,tot/y)):5,
+    no:n>0?Math.min(5,Math.max(MIN_COEFF,tot/n)):5,
+  };
 }
 
 const PRESET_CATEGORIES = [
@@ -468,7 +475,9 @@ function availBal(pid){
   return game.startingBank-spent;
 }
 
-// Parimutuel payout: losers' pool funds winners proportionally (zero-sum)
+// Parimutuel payout: losers' pool funds winners proportionally (zero-sum),
+// but a winner always gets at least ×1.05 on their stake — even if they
+// were the only bettor on that event — matching the displayed coeffs().
 function calcResults(){
   return game.participants.map(p=>{
     let bal=game.startingBank;
@@ -478,7 +487,7 @@ function calcResults(){
       const winPool=evt.bets[evt.outcome]||0;
       const totalPool=(evt.bets.yes||0)+(evt.bets.no||0);
       if(b.outcome===evt.outcome){
-        if(winPool>0) bal+=b.amount*(totalPool/winPool-1);
+        if(winPool>0) bal+=b.amount*(Math.max(MIN_COEFF,totalPool/winPool)-1);
       } else { bal-=b.amount; }
     });
     return { id:p.id, name:p.name, isAdmin:p.isAdmin, final:Math.round(bal), change:Math.round(bal-game.startingBank) };
@@ -680,6 +689,25 @@ function doGoBack(prev){
 }
 
 // ── Rendering ──────────────────────────────────────────────────────────────
+const LOGO_SVG = `<svg class="hero-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cupGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <filter id="logoGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#logoGlow)">
+    <path d="M16 34 Q4 22 14 12 M28 20 L28 8 M40 26 L46 16 M84 26 L92 18 M94 40 L104 36" stroke="#c084fc" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
+    <ellipse cx="61" cy="36" rx="30" ry="11" fill="none" stroke="#f5f0ff" stroke-width="6"/>
+    <path d="M32 36 L39 90 Q61 98 83 90 L90 36" fill="url(#cupGrad)" stroke="#7c3aed" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M67 46 L49 74 L59 74 L54 96 L78 66 L66 66 Z" fill="#f5f0ff"/>
+  </g>
+</svg>`;
+
 function render(){
   let html='';
   if(screen==='setup')    html=renderSetup();
@@ -702,7 +730,7 @@ function renderSetup(){
         ${w?`<div class="history-card-winner">🥇 ${esc(w.name)}</div>`:''}
       </div>`;
     }).join('');
-  return`<div class="hero"><h1>Party<br>Bets</h1><p>Ставки на события вечеринки</p></div>
+  return`<div class="hero">${LOGO_SVG}<h1>Party<br>Bets</h1><p>Ставки на события вечеринки</p></div>
     <div style="padding:0 20px 120px;">
       <button class="btn btn-primary" data-act="go-creating" style="margin-bottom:32px;">+ Создать игру</button>
       ${hist.length>0?`<div class="section-label">История игр <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— нажмите для деталей</span></div>`:''}
@@ -1127,7 +1155,7 @@ function showHistDetail(idx){
         const winPool=e.outcome?(pool[e.outcome]||0):0;
         const betRows=(e.bets||[]).map(b=>{
           const win=e.outcome&&b.outcome===e.outcome;
-          const profit=win&&winPool>0?Math.round(b.amount*(totalPool/winPool-1)):0;
+          const profit=win&&winPool>0?Math.round(b.amount*(Math.max(MIN_COEFF,totalPool/winPool)-1)):0;
           return`<div class="hist-bet-row">
             <span class="hist-bet-name">${esc(b.name)}</span>
             <span class="hist-bet-side ${b.outcome}">${b.outcome==='yes'?'ДА':'НЕТ'}</span>
