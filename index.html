@@ -68,17 +68,26 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .tag-star:hover { color:var(--chip); }
 
 .hero { padding:40px 20px 28px; }
-.hero-logo-wrap { width:92px; height:92px; margin-bottom:14px; border-radius:22px; overflow:hidden; filter:drop-shadow(0 0 18px rgba(139,92,246,.5)); }
+.hero-logo-wrap { width:100px; height:100px; margin-bottom:16px; padding:10px; box-sizing:border-box; border-radius:26px; overflow:hidden; background:var(--surface2); border:1px solid var(--border); filter:drop-shadow(0 0 20px rgba(139,92,246,.4)); }
 .hero-logo { width:100%; height:100%; object-fit:cover; transform:scale(1.4); transform-origin:52% 46%; display:block; }
 .hero h1 { font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1; background:linear-gradient(135deg,#f2ecff,var(--accent-h) 60%,var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .hero p { color:var(--muted); font-size:15px; margin-top:8px; }
 .section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:12px; }
 
-.history-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer; transition:border-color .15s; }
+.history-nav-row { display:flex; align-items:center; gap:12px; padding:2px 2px 14px; cursor:default; }
+.history-nav-icon { width:32px; height:32px; border-radius:50%; border:1.5px solid var(--accent); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.history-nav-text { flex:1; }
+.history-nav-title { font-weight:700; font-size:15px; }
+.history-nav-sub { color:var(--muted); font-size:12px; margin-top:1px; }
+.history-nav-chevron { color:var(--muted); font-size:18px; }
+
+.history-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color .15s; }
 .history-card:hover { border-color:var(--accent); }
-.history-card-name { font-weight:600; font-size:15px; }
-.history-card-meta { color:var(--muted); font-size:12px; margin-top:2px; }
-.history-card-winner { font-size:13px; color:var(--chip); font-weight:600; flex-shrink:0; }
+.history-card-num { flex-shrink:0; width:52px; height:52px; border-radius:var(--r-sm); background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800; color:var(--chip); }
+.history-card-body { flex:1; min-width:0; }
+.history-card-name { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.history-card-meta { color:var(--muted); font-size:11.5px; margin-top:3px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.history-card-winner { font-size:13px; color:var(--chip); font-weight:600; flex-shrink:0; white-space:nowrap; }
 .empty-state { text-align:center; padding:36px 20px; color:var(--muted); font-size:14px; }
 
 .form-section { margin-bottom:28px; }
@@ -708,16 +717,29 @@ function renderSetup(){
     ?`<div class="empty-state">Ещё не было ни одной игры</div>`
     :hist.slice(0,20).map((g,idx)=>{
       const w=g.results&&g.results[0];
+      const num=w&&w.final!=null?fmt(w.final):(g.pCount||'-');
       return`<div class="history-card" data-act="show-hist" data-idx="${idx}">
-        <div><div class="history-card-name">${esc(g.name)}</div>
-        <div class="history-card-meta">${fmtDate(g.createdAt)} · ${g.pCount} уч. · ${g.eCount} событ.</div></div>
+        <div class="history-card-num">${num}</div>
+        <div class="history-card-body">
+          <div class="history-card-name">${esc(g.name)}</div>
+          <div class="history-card-meta">
+            <span>📅 ${fmtDate(g.createdAt)}</span>·<span>👥 ${g.pCount} уч.</span>·<span>📋 ${g.eCount} событ.</span>
+          </div>
+        </div>
         ${w?`<div class="history-card-winner">🥇 ${esc(w.name)}</div>`:''}
       </div>`;
     }).join('');
   return`<div class="hero">${LOGO_SVG}<h1>Party<br>Bets</h1><p>Ставки на события вечеринки</p></div>
     <div style="padding:0 20px 120px;">
       <button class="btn btn-primary" data-act="go-creating" style="margin-bottom:32px;">+ Создать игру</button>
-      ${hist.length>0?`<div class="section-label">История игр <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— нажмите для деталей</span></div>`:''}
+      ${hist.length>0?`<div class="history-nav-row">
+        <div class="history-nav-icon">🕐</div>
+        <div class="history-nav-text">
+          <div class="history-nav-title">История игр</div>
+          <div class="history-nav-sub">нажмите для деталей</div>
+        </div>
+        <div class="history-nav-chevron">›</div>
+      </div>`:''}
       ${histHTML}
     </div>`;
 }
