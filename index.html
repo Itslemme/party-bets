@@ -68,7 +68,8 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:'I
 .tag-star:hover { color:var(--chip); }
 
 .hero { padding:40px 20px 28px; }
-.hero-logo { width:110px; height:110px; margin-bottom:10px; object-fit:contain; transform:scale(1.55); transform-origin:18% 45%; filter:drop-shadow(0 0 18px rgba(139,92,246,.55)); }
+.hero-logo-wrap { width:92px; height:92px; margin-bottom:14px; border-radius:22px; overflow:hidden; filter:drop-shadow(0 0 18px rgba(139,92,246,.5)); }
+.hero-logo { width:100%; height:100%; object-fit:cover; transform:scale(1.4); transform-origin:52% 46%; display:block; }
 .hero h1 { font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1; background:linear-gradient(135deg,#f2ecff,var(--accent-h) 60%,var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .hero p { color:var(--muted); font-size:15px; margin-top:8px; }
 .section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:12px; }
@@ -689,7 +690,7 @@ function doGoBack(prev){
 }
 
 // ── Rendering ──────────────────────────────────────────────────────────────
-const LOGO_SVG = `<img class="hero-logo" src="assets/logo.png" alt="Party Bets">`;
+const LOGO_SVG = `<div class="hero-logo-wrap"><img class="hero-logo" src="assets/logo.png" alt="Party Bets"></div>`;
 
 function render(){
   let html='';
