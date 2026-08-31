@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Party Bets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#080810; --surface:#0f0f1e; --surface2:#171728; --border:#22223a;
+  --accent:#7c4dff; --accent-h:#9566ff; --text:#ddddf0; --muted:#60608a;
+  --yes:#1faa6a; --yes-bg:#081a12; --yes-border:#112b1e; --yes-active:#24c97c;
+  --no:#aa2020; --no-bg:#1a0808; --no-border:#2b1111; --no-active:#cc2f2f;
+  --chip:#c8a44a; --danger:#c42828; --r:12px; --r-sm:8px;
+}
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
+#app { max-width:480px; min-height:100vh; margin:0 auto; }
+
+#overlay { position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:100; opacity:0; pointer-events:none; transition:opacity .2s; }
+#overlay.visible { opacity:1; pointer-events:auto; }
+
+#modal-wrap { position:fixed; bottom:0; left:50%; transform:translateX(-50%) translateY(24px); width:100%; max-width:480px; background:var(--surface2); border-radius:20px 20px 0 0; z-index:101; padding:0 20px 40px; max-height:88vh; overflow-y:auto; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; }
+#modal-wrap.visible { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+.modal-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:16px auto 20px; }
+
+#confirm-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:102; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; }
+#confirm-wrap.visible { opacity:1; pointer-events:auto; }
+.confirm-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:28px 24px; max-width:340px; width:100%; text-align:center; }
+.confirm-box h3 { font-size:18px; margin-bottom:8px; }
+.confirm-box p { color:var(--muted); font-size:14px; margin-bottom:24px; line-height:1.5; }
+.btn-row { display:flex; gap:10px; }
+
+.btn { display:block; width:100%; padding:14px 20px; border:none; border-radius:var(--r); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; text-align:center; transition:opacity .15s,background .15s; letter-spacing:.1px; line-height:1; }
+.btn:disabled { opacity:.35; cursor:not-allowed; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover:not(:disabled) { background:var(--accent-h); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+.btn-danger:hover:not(:disabled) { background:rgba(196,40,40,.1); }
+.btn-sm { width:auto; display:inline-block; padding:9px 16px; font-size:13px; border-radius:var(--r-sm); }
+
+.bottom-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; padding:10px 20px 28px; background:linear-gradient(to top,var(--bg) 65%,transparent); z-index:10; }
+
+.form-label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+.form-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); font-family:inherit; font-size:15px; padding:12px 14px; outline:none; transition:border-color .15s; }
+.form-input:focus { border-color:var(--accent); }
+.form-input::placeholder { color:var(--muted); }
+.input-row { display:flex; gap:8px; }
+.input-row .form-input { flex:1; }
+
+.bank-opts { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.bank-opt { padding:9px 14px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface); color:var(--text); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:border-color .15s,color .15s; }
+.bank-opt.sel { border-color:var(--accent); color:var(--accent); }
+.bank-opt.rand { color:var(--chip); }
+
+.tag-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.tag { display:flex; align-items:center; gap:4px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 8px 5px 12px; font-size:13px; font-weight:500; }
+.tag-admin { border-color:var(--accent); color:var(--accent); }
+.tag-rm { background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; padding:0 2px; line-height:1; }
+.tag-rm:hover { color:var(--danger); }
+.tag-star { background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:0 2px; line-height:1; }
+.tag-star:hover { color:var(--chip); }
+
+.hero { padding:44px 20px 28px; }
+.hero h1 { font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1; }
+.hero p { color:var(--muted); font-size:15px; margin-top:8px; }
+.section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:12px; }
+
+.history-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:pointer; transition:border-color .15s; }
+.history-card:hover { border-color:var(--accent); }
+.history-card-name { font-weight:600; font-size:15px; }
+.history-card-meta { color:var(--muted); font-size:12px; margin-top:2px; }
+.history-card-winner { font-size:13px; color:var(--chip); font-weight:600; flex-shrink:0; }
+.empty-state { text-align:center; padding:36px 20px; color:var(--muted); font-size:14px; }
+
+.form-section { margin-bottom:28px; }
+.back-btn { background:none; border:none; color:var(--muted); font-family:inherit; font-size:14px; cursor:pointer; padding:0; margin-bottom:16px; display:flex; align-items:center; gap:4px; }
+.play-header .back-btn { padding-top:14px; margin-bottom:10px; }
+.results-hdr .back-btn { justify-content:center; margin-bottom:10px; }
+.back-btn:hover { color:var(--text); }
+
+.event-list-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.event-list-item-info { flex:1; min-width:0; }
+.event-list-item-name { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.event-list-item-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.event-badge { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:.5px; text-transform:uppercase; flex-shrink:0; }
+.badge-preset { background:rgba(124,77,255,.14); color:var(--accent); }
+.badge-custom { background:rgba(200,164,74,.14); color:var(--chip); }
+.evt-edit-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px; flex-shrink:0; line-height:1; transition:color .15s; }
+.evt-edit-btn:hover { color:var(--accent); }
+
+.add-evt-row { display:flex; gap:8px; margin-bottom:12px; }
+.hint { font-size:12px; color:var(--muted); margin-top:6px; }
+
+.play-header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 20px 0; }
+.play-title { font-weight:700; font-size:18px; margin-bottom:12px; }
+.p-bar { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; padding-bottom:14px; max-height:168px; overflow-y:auto; }
+.p-chip { padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--r-sm); cursor:pointer; text-align:left; transition:border-color .15s; }
+.p-chip.active { border-color:var(--accent); }
+.p-chip-name { font-size:13px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.p-chip.active .p-chip-name { color:var(--accent); }
+.p-chip-bal { font-size:11px; color:var(--muted); margin-top:3px; }
+.p-chip.active .p-chip-bal { color:var(--accent); opacity:.7; }
+.content { padding:14px 20px 120px; }
+
+.ev-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:10px; }
+.ev-card-badge { margin-bottom:8px; }
+.ev-card-name { font-size:15px; font-weight:600; margin-bottom:14px; line-height:1.35; }
+
+.bet-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.bet-btn { padding:14px 10px; border:1px solid; border-radius:var(--r-sm); cursor:pointer; font-family:inherit; text-align:center; transition:border-color .15s,box-shadow .15s; user-select:none; }
+.bet-btn:disabled { opacity:.38; cursor:not-allowed; }
+.bet-btn.yes { background:var(--yes-bg); border-color:var(--yes-border); color:var(--yes); }
+.bet-btn.yes:hover:not(:disabled) { border-color:var(--yes); }
+.bet-btn.yes.placed { border-color:var(--yes-active); box-shadow:0 0 0 1px var(--yes-active); }
+.bet-btn.no { background:var(--no-bg); border-color:var(--no-border); color:var(--no); }
+.bet-btn.no:hover:not(:disabled) { border-color:var(--no); }
+.bet-btn.no.placed { border-color:var(--no-active); box-shadow:0 0 0 1px var(--no-active); }
+.bet-coeff { font-size:28px; font-weight:800; display:block; line-height:1; margin-bottom:3px; }
+.bet-label { font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; opacity:.65; display:block; }
+.bet-amount { font-size:11px; opacity:.6; margin-top:5px; display:block; }
+
+.cancel-bet-row { margin-top:10px; text-align:center; }
+.cancel-bet-btn { background:none; border:none; color:var(--muted); font-family:inherit; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:var(--r-sm); text-decoration:underline; transition:color .15s; }
+.cancel-bet-btn:hover { color:var(--danger); }
+
+.mark-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:10px; }
+.mark-card-name { font-size:15px; font-weight:600; margin-bottom:12px; line-height:1.35; }
+.mark-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mark-btn { padding:13px 10px; border:1px solid; border-radius:var(--r-sm); font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; text-align:center; letter-spacing:.5px; transition:background .15s,color .15s,border-color .15s; }
+.mark-btn.yes { background:var(--yes-bg); border-color:var(--yes-border); color:var(--yes); }
+.mark-btn.yes.sel { background:var(--yes); border-color:var(--yes); color:#fff; }
+.mark-btn.no { background:var(--no-bg); border-color:var(--no-border); color:var(--no); }
+.mark-btn.no.sel { background:var(--no); border-color:var(--no); color:#fff; }
+
+.results-hdr { padding:36px 20px 16px; text-align:center; }
+.results-hdr h1 { font-size:30px; font-weight:800; letter-spacing:-.5px; }
+.results-hdr p { color:var(--muted); font-size:14px; margin-top:6px; }
+.res-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:8px; }
+.res-item.gold { border-color:rgba(240,196,60,.25); background:rgba(240,196,60,.05); }
+.res-rank { font-size:22px; font-weight:800; width:36px; text-align:center; flex-shrink:0; }
+.res-name { flex:1; font-weight:600; font-size:15px; }
+.res-bal { text-align:right; }
+.res-final { font-size:18px; font-weight:700; color:var(--chip); }
+.res-change { font-size:12px; color:var(--muted); margin-top:2px; }
+.res-change.pos { color:var(--yes-active); }
+.res-change.neg { color:var(--no-active); }
+
+.achievements-section { margin-top:24px; }
+.achievements-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:12px; }
+.ach-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:14px; }
+.ach-emoji { font-size:28px; flex-shrink:0; width:42px; text-align:center; }
+.ach-body { flex:1; }
+.ach-name { font-size:13px; color:var(--muted); margin-bottom:2px; }
+.ach-title { font-size:16px; font-weight:800; }
+.ach-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+
+.modal-title { font-size:18px; font-weight:700; margin-bottom:16px; }
+.modal-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:8px; }
+.modal-event-name { font-size:13px; color:var(--muted); margin-bottom:4px; }
+.modal-coeff { font-size:40px; font-weight:800; letter-spacing:-1.5px; margin-bottom:20px; }
+.modal-coeff.yes { color:var(--yes-active); }
+.modal-coeff.no { color:var(--no-active); }
+.modal-outcome-label { font-size:20px; font-weight:700; margin-bottom:16px; }
+
+.quick-bets { display:flex; gap:8px; margin-bottom:16px; }
+.qbet { flex:1; padding:10px 6px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); cursor:pointer; text-align:center; transition:border-color .15s; }
+.qbet:hover { border-color:var(--accent); }
+.qbet-val { display:block; font-size:13px; font-weight:700; color:var(--chip); margin-bottom:2px; }
+.qbet-pct { display:block; font-size:11px; color:var(--muted); }
+.bet-inp { font-size:30px; font-weight:700; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); padding:12px; width:100%; outline:none; margin-bottom:6px; transition:border-color .15s; }
+.bet-inp:focus { border-color:var(--accent); }
+.bet-avail { font-size:12px; color:var(--muted); margin-bottom:18px; }
+.bet-avail span { color:var(--chip); font-weight:600; }
+
+/* ── Accordion preset categories ─────────────────────── */
+.preset-cat-block { border-bottom:1px solid var(--border); }
+.preset-cat-block:last-child { border-bottom:none; }
+.preset-cat-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 0; cursor:pointer; user-select:none; }
+.preset-cat-name { font-size:14px; font-weight:700; }
+.preset-cat-right { display:flex; align-items:center; gap:10px; }
+.preset-cat-count { font-size:11px; color:var(--accent); font-weight:600; }
+.preset-cat-arrow { font-size:12px; color:var(--muted); transition:transform .2s; }
+.preset-cat-arrow.open { transform:rotate(180deg); }
+.preset-cat-sel { padding:4px 10px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface); color:var(--muted); font-family:inherit; font-size:11px; font-weight:600; cursor:pointer; transition:color .15s,border-color .15s; }
+.preset-cat-sel:hover { color:var(--accent); border-color:var(--accent); }
+.preset-cat-sel.all-on { color:var(--accent); border-color:var(--accent); }
+.preset-cat-body { overflow:hidden; }
+.preset-cat-body.collapsed { display:none; }
+
+.preset-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+.preset-item:last-child { border-bottom:none; }
+.pcheck { width:20px; height:20px; flex-shrink:0; border:2px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; transition:background .15s,border-color .15s; }
+.pcheck.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+.preset-item-text { flex:1; font-size:14px; line-height:1.35; }
+
+/* ── Prob modal ───────────────────────────────────────── */
+.prob-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+.prob-pct { font-size:20px; font-weight:700; color:var(--accent); }
+.prob-quick { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.prob-qbtn { padding:6px 12px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface); color:var(--muted); font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:color .15s,border-color .15s; }
+.prob-qbtn:hover { color:var(--accent); border-color:var(--accent); }
+.prob-preview { display:flex; gap:8px; margin-top:12px; margin-bottom:18px; }
+.prob-preview-side { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:10px; text-align:center; }
+.prob-preview-coeff { font-size:22px; font-weight:800; }
+.prob-preview-coeff.yes-c { color:var(--yes-active); }
+.prob-preview-coeff.no-c { color:var(--no-active); }
+.prob-preview-label { font-size:11px; color:var(--muted); margin-top:2px; }
+
+input[type=range] { width:100%; appearance:none; height:4px; border-radius:2px; background:var(--border); outline:none; margin-bottom:6px; }
+input[type=range]::-webkit-slider-thumb { appearance:none; width:20px; height:20px; border-radius:50%; background:var(--accent); cursor:pointer; }
+input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--accent); border:none; cursor:pointer; }
+
+/* ── Bet ledger ───────────────────────────────────────── */
+.bet-ledger { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:5px; }
+.bet-ledger-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+.bet-ledger-name { flex:1; color:var(--muted); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bet-ledger-name.me { color:var(--text); }
+.bet-ledger-side { font-size:10px; font-weight:700; letter-spacing:.5px; padding:2px 6px; border-radius:4px; flex-shrink:0; }
+.bet-ledger-side.yes { color:var(--yes-active); background:rgba(36,201,124,.12); }
+.bet-ledger-side.no { color:var(--no-active); background:rgba(204,47,47,.12); }
+.bet-ledger-amt { color:var(--chip); font-weight:600; flex-shrink:0; }
+.bet-ledger-none { color:var(--border); }
+
+/* ── History detail ───────────────────────────────────── */
+.hist-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+.hist-tab { padding:8px 14px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s,border-color .15s; background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; }
+.hist-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+.hist-res-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+.hist-res-item:last-child { border-bottom:none; }
+.hist-res-rank { font-size:18px; width:30px; text-align:center; flex-shrink:0; }
+.hist-res-name { flex:1; font-size:14px; font-weight:600; }
+.hist-res-final { font-size:15px; font-weight:700; color:var(--chip); }
+.hist-res-change { font-size:11px; color:var(--muted); text-align:right; }
+.hist-res-change.pos { color:var(--yes-active); }
+.hist-res-change.neg { color:var(--no-active); }
+
+.hist-evt-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; margin-bottom:8px; }
+.hist-evt-name { font-size:13px; font-weight:600; margin-bottom:8px; line-height:1.3; display:flex; align-items:center; gap:8px; }
+.hist-evt-outcome { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; flex-shrink:0; }
+.hist-evt-outcome.yes { color:var(--yes-active); background:rgba(36,201,124,.12); }
+.hist-evt-outcome.no { color:var(--no-active); background:rgba(204,47,47,.12); }
+.hist-evt-bets { display:flex; flex-direction:column; gap:4px; }
+.hist-bet-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+.hist-bet-name { flex:1; color:var(--muted); }
+.hist-bet-side { font-size:10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+.hist-bet-side.yes { color:var(--yes-active); background:rgba(36,201,124,.12); }
+.hist-bet-side.no { color:var(--no-active); background:rgba(204,47,47,.12); }
+.hist-bet-amt { color:var(--chip); font-weight:600; }
+.hist-bet-result { font-size:11px; font-weight:700; margin-left:2px; }
+.hist-bet-result.win { color:var(--yes-active); }
+.hist-bet-result.lose { color:var(--no-active); }
+
+.delete-hist-btn { background:none; border:none; color:var(--danger); font-family:inherit; font-size:13px; cursor:pointer; padding:4px 0; opacity:.7; transition:opacity .15s; }
+.delete-hist-btn:hover { opacity:1; }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.divider { height:1px; background:var(--border); margin:24px 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay"></div>
+<div id="modal-wrap"><div class="modal-handle"></div><div id="modal-content"></div></div>
+<div id="confirm-wrap"><div id="confirm-content"></div></div>
+
+<script>
+'use strict';
+
+// ── Telegram Mini App integration (no-op outside Telegram) ─────────────────
+const tg = (window.Telegram && window.Telegram.WebApp) || null;
+if(tg){
+  tg.ready();
+  tg.expand();
+  try{ tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }catch(e){}
+  // Map Telegram's theme colours onto our CSS variables when available,
+  // so the app blends into the client's light/dark theme instead of
+  // always forcing its own dark palette.
+  const applyTgTheme=()=>{
+    const tp=tg.themeParams||{};
+    const root=document.documentElement.style;
+    if(tp.bg_color) root.setProperty('--bg',tp.bg_color);
+    if(tp.secondary_bg_color) root.setProperty('--surface',tp.secondary_bg_color);
+    if(tp.section_bg_color) root.setProperty('--surface2',tp.section_bg_color);
+    if(tp.text_color) root.setProperty('--text',tp.text_color);
+    if(tp.hint_color) root.setProperty('--muted',tp.hint_color);
+    if(tp.button_color) root.setProperty('--accent',tp.button_color);
+  };
+  applyTgTheme();
+  tg.onEvent && tg.onEvent('themeChanged',applyTgTheme);
+  tg.setHeaderColor && tg.setHeaderColor('secondary_bg_color');
+}
+function syncTelegramBackButton(){
+  if(!tg)return;
+  if(screen==='setup'){ tg.BackButton.hide(); return; }
+  tg.BackButton.show();
+}
+if(tg){
+  tg.BackButton.onClick(()=>{
+    if(screen==='creating') goSetup();
+    else if(screen!=='setup') goBack();
+  });
+}
+
+// Dynamic parimutuel coefficient (pool-ratio based), capped at ×5
+function coeffs(evt){
+  const y=evt.bets.yes||0, n=evt.bets.no||0, tot=y+n;
+  if(tot===0) return { yes:Math.min(5,1/evt.baseProbYes), no:Math.min(5,1/(1-evt.baseProbYes)) };
+  return { yes:y>0?Math.min(5,tot/y):5, no:n>0?Math.min(5,tot/n):5 };
+}
+
+const PRESET_CATEGORIES = [
+  { id:'c1', name:'🍻 Алкоголь & напитки', presets:[
+    {id:'a1',name:'Закончится алкоголь раньше полуночи',p:.45},
+    {id:'a2',name:'Кто-то откажется пить',p:.35},
+    {id:'a3',name:'Кто-то разольёт напиток',p:.75},
+    {id:'a4',name:'Кто-то перемешает разные виды алкоголя',p:.55},
+    {id:'a5',name:'Появится домашний коктейль собственного рецепта',p:.50},
+    {id:'a6',name:'Кто-то будет пить воду весь вечер',p:.30},
+    {id:'a7',name:'Исчезнет весь лёд',p:.60},
+    {id:'a8',name:'Кто-то потеряет свой стакан',p:.65},
+    {id:'a9',name:'Будет тост длиннее двух минут',p:.45},
+    {id:'a10',name:'Кто-то откроет бутылку зубами',p:.20},
+  ]},
+  { id:'c2', name:'🍕 Еда & закуски', presets:[
+    {id:'b1',name:'Закажут доставку еды',p:.60},
+    {id:'b2',name:'Закончится вся еда раньше алкоголя',p:.40},
+    {id:'b3',name:'Кто-то принесёт домашнюю еду',p:.50},
+    {id:'b4',name:'Кто-то откажется от угощения',p:.35},
+    {id:'b5',name:'Появится пицца',p:.65},
+    {id:'b6',name:'Кто-то будет есть прямо руками',p:.70},
+    {id:'b7',name:'Все снеки съедены за первый час',p:.55},
+    {id:'b8',name:'Обнаружится нехватка тарелок или вилок',p:.45},
+    {id:'b9',name:'Кто-то попробует приготовить что-то на месте',p:.25},
+    {id:'b10',name:'Будет спор чья кухня лучше',p:.35},
+  ]},
+  { id:'c3', name:'💃 Танцы & музыка', presets:[
+    {id:'d1',name:'Будут танцы',p:.80},
+    {id:'d2',name:'Кто-то споёт',p:.65},
+    {id:'d3',name:'Прозвучит хит и все подхватят',p:.60},
+    {id:'d4',name:'Кто-то попросит сменить музыку',p:.70},
+    {id:'d5',name:'Появится неожиданный диджей',p:.40},
+    {id:'d6',name:'Кто-то станцует соло в центре',p:.55},
+    {id:'d7',name:'Все одновременно споют припев',p:.50},
+    {id:'d8',name:'Музыка будет слишком громкой',p:.65},
+    {id:'d9',name:'Включат что-то совсем неуместное',p:.40},
+    {id:'d10',name:'Будет импровизированный батл на танцполе',p:.25},
+  ]},
+  { id:'c4', name:'❤️ Романтика & флирт', presets:[
+    {id:'e1',name:'Будет явный флирт',p:.75},
+    {id:'e2',name:'Кто-то познакомится с новым человеком',p:.55},
+    {id:'e3',name:'Кто-то позвонит бывшему или бывшей',p:.25},
+    {id:'e4',name:'Кто-то признается в симпатии',p:.30},
+    {id:'e5',name:'Пара уединится',p:.50},
+    {id:'e6',name:'Кто-то получит чужой номер телефона',p:.60},
+    {id:'e7',name:'Кто-то будет весь вечер ревновать',p:.35},
+    {id:'e8',name:'Начнётся вечериночный роман',p:.20},
+    {id:'e9',name:'Публичное признание в любви',p:.15},
+    {id:'e10',name:'Кто-то обнаружит что за ним флиртуют нечаянно',p:.40},
+  ]},
+  { id:'c5', name:'😤 Скандалы & драма', presets:[
+    {id:'f1',name:'Случится небольшой скандал',p:.30},
+    {id:'f2',name:'Кто-то уйдёт обидевшись',p:.20},
+    {id:'f3',name:'Кто-то заплачет',p:.25},
+    {id:'f4',name:'Двое поругаются',p:.30},
+    {id:'f5',name:'Кто-то начнёт разговор о политике',p:.35},
+    {id:'f6',name:'Выяснятся старые обиды',p:.20},
+    {id:'f7',name:'Кто-то хлопнет дверью',p:.15},
+    {id:'f8',name:'Разгорится спор кто прав',p:.60},
+    {id:'f9',name:'Кто-то обидит другого нечаянно',p:.45},
+    {id:'f10',name:'Мирилка произойдёт публично',p:.40},
+  ]},
+  { id:'c6', name:'😂 Казусы & фейлы', presets:[
+    {id:'g1',name:'Кто-то споткнётся или упадёт',p:.70},
+    {id:'g2',name:'Опоздают больше трёх человек',p:.55},
+    {id:'g3',name:'Кто-то уснёт на вечеринке',p:.40},
+    {id:'g4',name:'Кто-то что-то разобьёт',p:.50},
+    {id:'g5',name:'Потеряется чья-то вещь',p:.35},
+    {id:'g6',name:'Кто-то порвёт или испачкает одежду',p:.25},
+    {id:'g7',name:'Произойдёт конфуз с туалетом',p:.20},
+    {id:'g8',name:'Кто-то промажет мимо мусорки',p:.50},
+    {id:'g9',name:'Кто-то ударится головой',p:.45},
+    {id:'g10',name:'Кто-то застрянет в дверях с руками полными вещей',p:.30},
+  ]},
+  { id:'c7', name:'📱 Телефон & соцсети', presets:[
+    {id:'h1',name:'Кто-то покажет смешное видео',p:.80},
+    {id:'h2',name:'Сделают общее фото для соцсетей',p:.70},
+    {id:'h3',name:'Телефон кого-то разрядится',p:.65},
+    {id:'h4',name:'Кто-то напишет что-то лишнее в соцсетях',p:.35},
+    {id:'h5',name:'Устроят инстаграм-фотосессию',p:.50},
+    {id:'h6',name:'Кто-то потеряет телефон на вечеринке',p:.30},
+    {id:'h7',name:'Кто-то будет весь вечер в телефоне',p:.60},
+    {id:'h8',name:'Разрядится общий павербанк',p:.40},
+    {id:'h9',name:'Кто-то снимет видео в сториз которое потом пожалеет',p:.45},
+    {id:'h10',name:'Появится мем про кого-то из компании',p:.25},
+  ]},
+  { id:'c8', name:'🎮 Игры & конкурсы', presets:[
+    {id:'i1',name:'Начнётся пьяная игра',p:.60},
+    {id:'i2',name:'Кто-то предложит правду или действие',p:.55},
+    {id:'i3',name:'Устроят конкурс или соревнование',p:.50},
+    {id:'i4',name:'Кто-то будет жульничать в игре',p:.40},
+    {id:'i5',name:'Проигравший выполнит штраф',p:.65},
+    {id:'i6',name:'Кто-то обидится из-за поражения',p:.35},
+    {id:'i7',name:'Игра затянется на весь вечер',p:.30},
+    {id:'i8',name:'Появятся карты',p:.55},
+    {id:'i9',name:'Организуют мини-турнир',p:.30},
+    {id:'i10',name:'Появится монополия или другая настолка',p:.20},
+  ]},
+  { id:'c9', name:'💬 Разговоры & тосты', presets:[
+    {id:'j1',name:'Тост «За любовь!»',p:.75},
+    {id:'j2',name:'Кто-то скажет «последний раз» и выпьет снова',p:.80},
+    {id:'j3',name:'Кто-то расскажет неловкую историю о себе',p:.60},
+    {id:'j4',name:'Разговор зайдёт о смысле жизни',p:.45},
+    {id:'j5',name:'Кто-то случайно раскроет чужую тайну',p:.30},
+    {id:'j6',name:'Будет обсуждение чьих-то отношений',p:.55},
+    {id:'j7',name:'Кто-то начнёт ныть или жаловаться на жизнь',p:.50},
+    {id:'j8',name:'Появится внутренняя шутка компании',p:.70},
+    {id:'j9',name:'Кто-то произнесёт длинный монолог',p:.45},
+    {id:'j10',name:'Будет серьёзный разговор о будущем',p:.40},
+  ]},
+  { id:'c10', name:'🌙 Концовка вечеринки', presets:[
+    {id:'k1',name:'Вечеринка затянется после полуночи',p:.70},
+    {id:'k2',name:'Кто-то уйдёт первым',p:.65},
+    {id:'k3',name:'Последний гость уйдёт после трёх ночи',p:.40},
+    {id:'k4',name:'Кто-то останется ночевать',p:.35},
+    {id:'k5',name:'Уборка начнётся сразу после',p:.25},
+    {id:'k6',name:'Кто-то потеряет вещи при выходе',p:.30},
+    {id:'k7',name:'Хозяин выгонит гостей',p:.20},
+    {id:'k8',name:'Кто-то вызовет такси для других',p:.45},
+    {id:'k9',name:'Назначат следующую вечеринку',p:.60},
+    {id:'k10',name:'Кто-то придёт ещё раз на следующий день',p:.15},
+  ]},
+];
+
+const PRESETS = PRESET_CATEGORIES.flatMap(c => c.presets.map(p => ({...p, catId:c.id, baseProbYes:p.p})));
+
+// ── State ──────────────────────────────────────────────────────────────────
+let screen = 'setup';
+let cr = { name:'', bank:1000, participants:[], events:[] };
+let game = null;
+let markOut = {};
+let results = null;
+let achievements = {};
+
+let hist = [];
+try { hist = JSON.parse(localStorage.getItem('pbHist')||'[]'); } catch(e){}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+let _uid=0;
+function uid(){ return Date.now()+'_'+(++_uid); }
+function savHist(){ try{ localStorage.setItem('pbHist',JSON.stringify(hist)); }catch(e){} }
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU'); }
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}); }
+function esc(s){ if(s==null)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Calculations ───────────────────────────────────────────────────────────
+function availBal(pid){
+  const p=game.participants.find(x=>x.id===pid); if(!p)return 0;
+  let spent=0; Object.values(p.bets).forEach(b=>spent+=b.amount);
+  return game.startingBank-spent;
+}
+
+// Parimutuel payout: losers' pool funds winners proportionally (zero-sum)
+function calcResults(){
+  return game.participants.map(p=>{
+    let bal=game.startingBank;
+    game.events.forEach(evt=>{
+      const b=p.bets[evt.id];
+      if(!b||evt.outcome==null)return;
+      const winPool=evt.bets[evt.outcome]||0;
+      const totalPool=(evt.bets.yes||0)+(evt.bets.no||0);
+      if(b.outcome===evt.outcome){
+        if(winPool>0) bal+=b.amount*(totalPool/winPool-1);
+      } else { bal-=b.amount; }
+    });
+    return { id:p.id, name:p.name, isAdmin:p.isAdmin, final:Math.round(bal), change:Math.round(bal-game.startingBank) };
+  }).sort((a,b)=>b.final-a.final);
+}
+
+// 5 варианта названия/описания на каждую категорию титула — выбирается случайно
+const TITLE_VARIANTS = {
+  sniper: [
+    {emoji:'🎯',title:'Снайпер',desc:'Угадал все ставки без промаха'},
+    {emoji:'🔮',title:'Оракул вечеринки',desc:'Видел исходы наперёд'},
+    {emoji:'🧙',title:'Пифия',desc:'Ни разу не ошибся в предсказаниях'},
+    {emoji:'🕵️',title:'Ясновидящий',desc:'Раскусил каждое событие'},
+    {emoji:'🏹',title:'Меткий стрелок',desc:'100% точности по ставкам'},
+  ],
+  flop: [
+    {emoji:'🤡',title:'Горе-провидец',desc:'Ни одного угаданного события'},
+    {emoji:'🙈',title:'Мимо кассы',desc:'Промахнулся с каждой ставкой'},
+    {emoji:'🎪',title:'Клоун вечера',desc:'Предсказания наоборот'},
+    {emoji:'🌀',title:'Антиоракул',desc:'Всегда ставил не туда'},
+    {emoji:'🥴',title:'Слепая Фемида',desc:'Не угадал ни разу за вечер'},
+  ],
+  king: [
+    {emoji:'👑',title:'Король вечеринки',desc:'Больше всех фишек в финале'},
+    {emoji:'🏆',title:'Хозяин банка',desc:'Обогнал всех по балансу'},
+    {emoji:'💎',title:'Главный богач',desc:'Финишировал первым по фишкам'},
+    {emoji:'🦅',title:'Верхушка стола',desc:'Заработал больше остальных'},
+    {emoji:'🌟',title:'Звезда вечера',desc:'Лучший финансовый результат'},
+  ],
+  bottom: [
+    {emoji:'💸',title:'Дно вечеринки',desc:'Умудрился потерять больше всех'},
+    {emoji:'🕳️',title:'Чёрная дыра банка',desc:'Слил фишки быстрее всех'},
+    {emoji:'📉',title:'Антирекорд вечера',desc:'Самый большой минус в игре'},
+    {emoji:'🥀',title:'Банкрот вечеринки',desc:'Растерял почти все фишки'},
+    {emoji:'🫠',title:'Растаявшие фишки',desc:'Финишировал в глубоком минусе'},
+  ],
+  spender: [
+    {emoji:'💰',title:'Мажор',desc:'Поставил больше всех фишек суммарно'},
+    {emoji:'🎰',title:'Азартный игрок',desc:'Не жалел фишек на ставки'},
+    {emoji:'🐘',title:'Крупный инвестор',desc:'Вложился по-крупному во всё'},
+    {emoji:'🔥',title:'Горячая рука',desc:'Ставил щедро весь вечер'},
+    {emoji:'🎲',title:'Смелый капитал',desc:'Разогнал банк по максимуму'},
+  ],
+  cheap: [
+    {emoji:'🐣',title:'Жмот',desc:'Жалел каждую фишку'},
+    {emoji:'🪙',title:'Скряга вечера',desc:'Ставил по минимуму весь вечер'},
+    {emoji:'🧊',title:'Расчётливый',desc:'Экономил фишки как мог'},
+    {emoji:'🐌',title:'Медленный старт',desc:'Почти не рисковал деньгами'},
+    {emoji:'🤏',title:'Копеечные ставки',desc:'Играл по чуть-чуть'},
+  ],
+  allin: [
+    {emoji:'🦁',title:'Ва-банк!',desc:'Самая крупная одиночная ставка'},
+    {emoji:'🚀',title:'Всё на кон',desc:'Рискнул по-крупному одним разом'},
+    {emoji:'🎢',title:'Адреналин',desc:'Поставил максимум за один раз'},
+    {emoji:'🐯',title:'Смельчак вечера',desc:'Не побоялся крупной ставки'},
+    {emoji:'⚡',title:'Ва-банк-звезда',desc:'Один бросок — и по-крупному'},
+  ],
+  rebel: [
+    {emoji:'🦊',title:'Бунтарь',desc:'Всегда шёл против большинства'},
+    {emoji:'🏴',title:'Одиночка',desc:'Ставил вопреки всем остальным'},
+    {emoji:'🌊',title:'Против течения',desc:'Никогда не следовал за толпой'},
+    {emoji:'🎭',title:'Контрариан',desc:'Играл наперекор мнению большинства'},
+    {emoji:'🦂',title:'Чёрная овца',desc:'Всегда выбирал свой путь'},
+  ],
+  sheep: [
+    {emoji:'🐑',title:'Овца',desc:'Всегда ставил как большинство'},
+    {emoji:'🐥',title:'Со всеми заодно',desc:'Следовал за общим мнением'},
+    {emoji:'🧩',title:'Часть толпы',desc:'Ставил вместе с большинством'},
+    {emoji:'🎏',title:'Флюгер',desc:'Всегда на стороне большинства'},
+    {emoji:'🐬',title:'Стайное чутьё',desc:'Безопасные ставки с толпой'},
+  ],
+  yesOnly: [
+    {emoji:'✅',title:'Да-да-да',desc:'Ставил только на «ДА»'},
+    {emoji:'🌞',title:'Оптимист вечера',desc:'Верил во всё хорошее'},
+    {emoji:'👍',title:'Позитивщик',desc:'Всегда выбирал «ДА»'},
+    {emoji:'🌈',title:'Верю в лучшее',desc:'Ставил исключительно на успех'},
+    {emoji:'🙌',title:'Всегда «за»',desc:'Ни разу не сказал «нет»'},
+  ],
+  noOnly: [
+    {emoji:'❌',title:'Нет-нет-нет',desc:'Ставил только на «НЕТ»'},
+    {emoji:'🌧️',title:'Скептик вечера',desc:'Не верил ни во что'},
+    {emoji:'👎',title:'Пессимист',desc:'Всегда выбирал «НЕТ»'},
+    {emoji:'🚫',title:'Всегда «против»',desc:'Ни разу не сказал «да»'},
+    {emoji:'🕶️',title:'Циник вечеринки',desc:'Сомневался во всех событиях'},
+  ],
+  buddhist: [
+    {emoji:'⚖️',title:'Буддист',desc:'Финиш почти там же где старт'},
+    {emoji:'🧘',title:'Дзен-мастер',desc:'Сохранил равновесие баланса'},
+    {emoji:'🌾',title:'Стабильность',desc:'Почти не изменил свой банк'},
+    {emoji:'🕊️',title:'Спокойствие',desc:'Закончил там же, где начал'},
+    {emoji:'☯️',title:'Гармония',desc:'Баланс остался почти неизменным'},
+  ],
+  extreme: [
+    {emoji:'🌪️',title:'Экстремал',desc:'Самый большой скачок баланса'},
+    {emoji:'🎢',title:'Американские горки',desc:'Баланс летал вверх-вниз'},
+    {emoji:'⚡',title:'Взрывной вечер',desc:'Резкий скачок фишек'},
+    {emoji:'🌋',title:'Вулкан эмоций',desc:'Самое сильное изменение баланса'},
+    {emoji:'🎇',title:'Фейерверк',desc:'Баланс изменился ярче всех'},
+  ],
+  spectator: [
+    {emoji:'💤',title:'Зритель',desc:'Наблюдал но не ставил'},
+    {emoji:'👀',title:'Молчаливый наблюдатель',desc:'Не сделал ни одной ставки'},
+    {emoji:'🍿',title:'С попкорном сбоку',desc:'Просто наблюдал за игрой'},
+    {emoji:'🛋️',title:'В сторонке',desc:'Предпочёл не рисковать вовсе'},
+    {emoji:'🧊',title:'Холодная кровь',desc:'Не поставил ни фишки'},
+  ],
+  soul: [
+    {emoji:'🎭',title:'Душа компании',desc:'Отличный участник вечеринки'},
+    {emoji:'🎉',title:'Заводила',desc:'Внёс энергию в вечер'},
+    {emoji:'🥳',title:'Праздничный дух',desc:'Радовал всех своим участием'},
+    {emoji:'🌟',title:'Украшение вечера',desc:'Просто хороший участник игры'},
+    {emoji:'🎈',title:'Весельчак',desc:'Держал настроение на высоте'},
+  ],
+};
+function pickVariant(key){ const arr=TITLE_VARIANTS[key]; return arr[Math.floor(Math.random()*arr.length)]; }
+
+function calcAchievements(res,g){
+  const medals=['🥇','🥈','🥉'];
+  const stats=g.participants.map(p=>{
+    const r=res.find(x=>x.id===p.id);
+    const bets=Object.values(p.bets);
+    const betCount=bets.length;
+    const totalBetAmt=bets.reduce((s,b)=>s+b.amount,0);
+    const maxBet=betCount>0?Math.max(...bets.map(b=>b.amount)):0;
+    const betEvts=g.events.filter(e=>p.bets[e.id]&&e.outcome!=null);
+    const correct=betEvts.filter(e=>p.bets[e.id].outcome===e.outcome).length;
+    const accuracy=betEvts.length>0?correct/betEvts.length:null;
+    let withMaj=0,againstMaj=0;
+    g.events.forEach(e=>{
+      const b=p.bets[e.id]; if(!b)return;
+      const yc=g.participants.filter(pp=>pp.bets[e.id]?.outcome==='yes').length;
+      const nc=g.participants.filter(pp=>pp.bets[e.id]?.outcome==='no').length;
+      const maj=yc>nc?'yes':nc>yc?'no':null;
+      if(maj===b.outcome)withMaj++; else if(maj!==null)againstMaj++;
+    });
+    const allYes=betCount>=2&&bets.every(b=>b.outcome==='yes');
+    const allNo=betCount>=2&&bets.every(b=>b.outcome==='no');
+    return { id:p.id, name:p.name, final:r.final, change:r.change, betCount, totalBetAmt, maxBet, correct, betEvtCount:betEvts.length, accuracy, withMaj, againstMaj, allYes, allNo };
+  });
+  const assigned=new Set();
+  const titles={};
+  function assign(id,key){ if(id&&!assigned.has(id)){ assigned.add(id); titles[id]=pickVariant(key); return true; } return false; }
+  function top(arr,fn){ return [...arr].filter(s=>!assigned.has(s.id)).sort(fn)[0]; }
+  const perfect=stats.find(s=>s.betEvtCount>=3&&s.accuracy===1);
+  assign(perfect?.id,'sniper');
+  const zero=stats.filter(s=>s.betEvtCount>=3&&s.accuracy===0).sort((a,b)=>b.betEvtCount-a.betEvtCount)[0];
+  assign(zero?.id,'flop');
+  assign(top(stats,(a,b)=>b.final-a.final)?.id,'king');
+  assign(top(stats,(a,b)=>a.final-b.final)?.id,'bottom');
+  const bt=top(stats,(a,b)=>b.totalBetAmt-a.totalBetAmt); if(bt?.totalBetAmt>0)assign(bt?.id,'spender');
+  const sm=top(stats.filter(s=>s.betCount>0),(a,b)=>a.totalBetAmt-b.totalBetAmt); assign(sm?.id,'cheap');
+  const bs=top(stats,(a,b)=>b.maxBet-a.maxBet); if(bs?.maxBet>0)assign(bs?.id,'allin');
+  assign(top(stats.filter(s=>s.againstMaj>=2),(a,b)=>b.againstMaj-a.againstMaj)?.id,'rebel');
+  assign(top(stats.filter(s=>s.withMaj>=2),(a,b)=>b.withMaj-a.withMaj)?.id,'sheep');
+  const yg=stats.find(s=>!assigned.has(s.id)&&s.allYes); assign(yg?.id,'yesOnly');
+  const ng=stats.find(s=>!assigned.has(s.id)&&s.allNo); assign(ng?.id,'noOnly');
+  assign(top(stats,(a,b)=>Math.abs(a.change)-Math.abs(b.change))?.id,'buddhist');
+  assign(top(stats,(a,b)=>Math.abs(b.change)-Math.abs(a.change))?.id,'extreme');
+  const sp=stats.find(s=>!assigned.has(s.id)&&s.betCount===0); assign(sp?.id,'spectator');
+  stats.forEach(s=>{ if(!assigned.has(s.id))assign(s.id,'soul'); });
+  return titles;
+}
+
+// ── Back navigation (admin only, past setup) ────────────────────────────────
+const SCREEN_BACK = { creating:'setup', playing:'creating', marking:'playing', results:'marking' };
+function currentIsAdmin(){
+  if(!game)return true; // no game yet (creating stage) — unrestricted
+  const p=game.participants.find(x=>x.id===game.curPid);
+  return !!(p&&p.isAdmin);
+}
+function backBtnHTML(){
+  const ok=currentIsAdmin();
+  return`<button class="back-btn" data-act="${ok?'go-back':''}" ${ok?'':'style="opacity:.35;cursor:not-allowed;" title="Вернуться может только организатор"'}>← Назад${ok?'':' (только организатор)'}</button>`;
+}
+function goBack(){
+  const prev=SCREEN_BACK[screen]; if(!prev)return;
+  if(!currentIsAdmin())return;
+  if(screen==='playing'||screen==='results'){
+    showConfirm(`<div class="confirm-box">
+      <h3>Вернуться назад?</h3>
+      <p>${screen==='playing'?'Текущие ставки и настройки игры будут сброшены.':'Итоги будут пересмотрены, запись в истории удалится.'}</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="gb-no" style="flex:1">Отмена</button>
+        <button class="btn btn-danger" id="gb-yes" style="flex:1">Назад</button>
+      </div>
+    </div>`);
+    document.getElementById('gb-no')?.addEventListener('click',closeConfirm);
+    document.getElementById('gb-yes')?.addEventListener('click',()=>{ closeConfirm(); doGoBack(prev); });
+    return;
+  }
+  doGoBack(prev);
+}
+function doGoBack(prev){
+  if(screen==='results'){
+    if(hist.length&&game&&hist[0].id===game.id){ hist.shift(); savHist(); }
+    results=null; achievements={};
+  }
+  screen=prev; render();
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function render(){
+  let html='';
+  if(screen==='setup')    html=renderSetup();
+  else if(screen==='creating') html=renderCreating();
+  else if(screen==='playing')  html=renderPlaying();
+  else if(screen==='marking')  html=renderMarking();
+  else if(screen==='results')  html=renderResults();
+  document.getElementById('app').innerHTML=html;
+  syncTelegramBackButton();
+}
+
+function renderSetup(){
+  const histHTML=hist.length===0
+    ?`<div class="empty-state">Ещё не было ни одной игры</div>`
+    :hist.slice(0,20).map((g,idx)=>{
+      const w=g.results&&g.results[0];
+      return`<div class="history-card" data-act="show-hist" data-idx="${idx}">
+        <div><div class="history-card-name">${esc(g.name)}</div>
+        <div class="history-card-meta">${fmtDate(g.createdAt)} · ${g.pCount} уч. · ${g.eCount} событ.</div></div>
+        ${w?`<div class="history-card-winner">🥇 ${esc(w.name)}</div>`:''}
+      </div>`;
+    }).join('');
+  return`<div class="hero"><h1>Party<br>Bets</h1><p>Ставки на события вечеринки</p></div>
+    <div style="padding:0 20px 120px;">
+      <button class="btn btn-primary" data-act="go-creating" style="margin-bottom:32px;">+ Создать игру</button>
+      ${hist.length>0?`<div class="section-label">История игр <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">— нажмите для деталей</span></div>`:''}
+      ${histHTML}
+    </div>`;
+}
+
+function renderCreating(){
+  const banks=[500,1000,2000,5000];
+  const canLaunch=cr.participants.length>=2&&cr.events.length>=1;
+  return`<div style="padding:20px 20px 0;">
+    <button class="back-btn" data-act="go-setup">← Назад</button>
+    <div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:28px;">Новая игра</div>
+  </div>
+  <div class="content">
+    <div class="form-section">
+      <label class="form-label">Название</label>
+      <input class="form-input" id="g-name" type="text" placeholder="Вечеринка у Кати" value="${esc(cr.name)}">
+    </div>
+    <div class="form-section">
+      <label class="form-label">Начальный банк фишек</label>
+      <div class="bank-opts">
+        ${banks.map(b=>`<button class="bank-opt ${cr.bank===b?'sel':''}" data-act="set-bank" data-v="${b}">${fmt(b)}</button>`).join('')}
+        <button class="bank-opt rand" data-act="rand-bank">🎲</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="form-input" id="bank-custom" type="number" placeholder="Своё значение…" min="100" max="999999" step="500" style="font-size:14px;padding:9px 12px;">
+        <button class="btn btn-secondary btn-sm" data-act="set-bank-custom">OK</button>
+      </div>
+      <div class="hint" id="bank-hint">Выбрано: <b>${fmt(cr.bank)}</b> фишек</div>
+    </div>
+    <div class="form-section">
+      <label class="form-label">Участники</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Первый — организатор ★. Нажмите ☆ чтобы переназначить.</div>
+      <div class="input-row" style="margin-bottom:6px;">
+        <input class="form-input" id="p-name" type="text" placeholder="Имя участника" maxlength="35">
+        <button class="btn btn-secondary btn-sm" data-act="add-p">Добавить</button>
+      </div>
+      <div class="hint" id="p-err" style="display:none;color:var(--danger);margin-bottom:6px;">Такое имя уже есть</div>
+      <div id="p-list">${renderPList()}</div>
+    </div>
+    <div class="form-section">
+      <label class="form-label">События</label>
+      <div class="add-evt-row">
+        <button class="btn btn-secondary btn-sm" data-act="show-presets">Из списка</button>
+        <button class="btn btn-secondary btn-sm" data-act="show-custom">+ Своё</button>
+      </div>
+      <div id="e-list">${renderEList()}</div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn btn-primary" data-act="launch" ${canLaunch?'':'disabled'}>Запустить игру</button>
+  </div>`;
+}
+
+function renderPList(){
+  if(cr.participants.length===0)return`<div class="hint">Добавьте хотя бы 2 участника</div>`;
+  return`<div class="tag-list">${cr.participants.map((p,i)=>`
+    <div class="tag ${i===0?'tag-admin':''}">
+      ${i===0?`<span style="color:var(--chip)">★</span>&nbsp;`:`<button class="tag-star" data-act="make-admin" data-id="${p.id}">☆</button>`}
+      ${esc(p.name)}<button class="tag-rm" data-act="rm-p" data-id="${p.id}">✕</button>
+    </div>`).join('')}</div>`;
+}
+
+function renderEList(){
+  if(cr.events.length===0)return`<div class="hint">Добавьте хотя бы одно событие</div>`;
+  return cr.events.map(e=>`
+    <div class="event-list-item">
+      <span class="event-badge badge-${e.type}">${e.type==='preset'?'preset':'custom'}</span>
+      <div class="event-list-item-info">
+        <div class="event-list-item-name">${esc(e.name)}</div>
+        <div class="event-list-item-sub">Базовые коэфф.: ×${Math.min(5,1/e.baseProbYes).toFixed(2)} / ×${Math.min(5,1/(1-e.baseProbYes)).toFixed(2)}</div>
+      </div>
+      <button class="evt-edit-btn" data-act="edit-prob" data-id="${e.id}">✎</button>
+      <button class="tag-rm" data-act="rm-e" data-id="${e.id}" style="font-size:16px;padding:4px 6px;">✕</button>
+    </div>`).join('');
+}
+
+function renderPlaying(){
+  const curP=game.participants.find(p=>p.id===game.curPid)||game.participants[0];
+  const pBar=game.participants.map(p=>`
+    <div class="p-chip ${p.id===curP.id?'active':''}" data-act="set-p" data-id="${p.id}">
+      <div class="p-chip-name">${esc(p.name)}${p.isAdmin?' ★':''}</div>
+      <div class="p-chip-bal">${fmt(availBal(p.id))}&nbsp;фш</div>
+    </div>`).join('');
+
+  const cards=game.events.map(evt=>{
+    const b=curP.bets[evt.id];
+    const hasYes=b&&b.outcome==='yes', hasNo=b&&b.outcome==='no', hasBet=!!b;
+    const ledger=game.participants.map(p=>{
+      const pb=p.bets[evt.id], isMe=p.id===curP.id;
+      if(!pb)return`<div class="bet-ledger-row"><span class="bet-ledger-name ${isMe?'me':''}">${esc(p.name)}${p.isAdmin?' ★':''}</span><span class="bet-ledger-none">—</span></div>`;
+      return`<div class="bet-ledger-row"><span class="bet-ledger-name ${isMe?'me':''}">${esc(p.name)}${p.isAdmin?' ★':''}</span><span class="bet-ledger-side ${pb.outcome}">${pb.outcome==='yes'?'ДА':'НЕТ'}</span><span class="bet-ledger-amt">${fmt(pb.amount)}&nbsp;фш</span></div>`;
+    }).join('');
+    const co=coeffs(evt);
+    return`<div class="ev-card">
+      <div class="ev-card-badge"><span class="event-badge badge-${evt.type}">${evt.type==='preset'?'preset':'custom'}</span></div>
+      <div class="ev-card-name">${esc(evt.name)}</div>
+      <div class="bet-btns">
+        <button class="bet-btn yes ${hasYes?'placed':''}" data-act="${hasBet?'':'open-bet'}" data-eid="${evt.id}" data-out="yes" ${hasBet?'disabled':''}>
+          <span class="bet-coeff">×${co.yes.toFixed(2)}</span><span class="bet-label">ДА</span>
+          ${hasYes?`<span class="bet-amount">↑ ${fmt(b.amount)} фш</span>`:''}
+        </button>
+        <button class="bet-btn no ${hasNo?'placed':''}" data-act="${hasBet?'':'open-bet'}" data-eid="${evt.id}" data-out="no" ${hasBet?'disabled':''}>
+          <span class="bet-coeff">×${co.no.toFixed(2)}</span><span class="bet-label">НЕТ</span>
+          ${hasNo?`<span class="bet-amount">↑ ${fmt(b.amount)} фш</span>`:''}
+        </button>
+      </div>
+      ${hasBet?`<div class="cancel-bet-row"><button class="cancel-bet-btn" data-act="cancel-bet" data-eid="${evt.id}">Отменить ставку</button></div>`:''}
+      <div class="bet-ledger">${ledger}</div>
+    </div>`;
+  }).join('');
+
+  return`<div class="play-header">
+    ${backBtnHTML()}
+    <div class="play-title">${esc(game.name)}</div><div class="p-bar">${pBar}</div></div>
+    <div class="content">${cards}</div>
+    <div class="bottom-bar"><button class="btn btn-danger" data-act="end-confirm">Завершить вечеринку</button></div>`;
+}
+
+function renderMarking(){
+  const allDone=game.events.every(e=>markOut[e.id]!=null);
+  const cards=game.events.map(evt=>{
+    const out=markOut[evt.id];
+    return`<div class="mark-card">
+      <div class="mark-card-name">${esc(evt.name)}</div>
+      <div class="mark-btns">
+        <button class="mark-btn yes ${out==='yes'?'sel':''}" data-act="set-out" data-eid="${evt.id}" data-out="yes">ДА</button>
+        <button class="mark-btn no  ${out==='no'?'sel':''}" data-act="set-out" data-eid="${evt.id}" data-out="no">НЕТ</button>
+      </div>
+    </div>`;
+  }).join('');
+  return`<div style="padding:20px 20px 0;">
+    ${backBtnHTML()}
+    <div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;">Что произошло?</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">Отметьте фактические исходы каждого события</div>
+  </div>
+  <div class="content" style="padding-top:12px;">${cards}</div>
+  <div class="bottom-bar"><button class="btn btn-primary" data-act="confirm-out" ${allDone?'':'disabled'}>Подтвердить итоги</button></div>`;
+}
+
+function renderResults(){
+  if(!results)return'';
+  const medals=['🥇','🥈','🥉'];
+  const items=results.map((r,i)=>`
+    <div class="res-item ${i===0?'gold':''}">
+      <div class="res-rank">${medals[i]||(i+1)}</div>
+      <div class="res-name">${esc(r.name)}${r.isAdmin?' ★':''}</div>
+      <div class="res-bal">
+        <div class="res-final">${fmt(r.final)}</div>
+        <div class="res-change ${r.change>=0?'pos':'neg'}">${r.change>=0?'+':''}${fmt(r.change)}</div>
+      </div>
+    </div>`).join('');
+  const achCards=results.map(r=>{
+    const a=achievements[r.id]; if(!a)return'';
+    return`<div class="ach-card">
+      <div class="ach-emoji">${a.emoji}</div>
+      <div class="ach-body">
+        <div class="ach-name">${esc(r.name)}</div>
+        <div class="ach-title">${a.title}</div>
+        <div class="ach-desc">${a.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return`<div class="results-hdr">${backBtnHTML()}<h1>Итоги вечеринки</h1><p>${esc(game.name)} · ${game.participants.length} участников</p></div>
+    <div style="padding:0 20px 120px;">
+      ${items}
+      <div class="achievements-section">
+        <div class="achievements-label">Титулы вечеринки</div>
+        ${achCards}
+      </div>
+    </div>
+    <div class="bottom-bar"><button class="btn btn-primary" data-act="new-game">Новая игра</button></div>`;
+}
+
+// ── Dispatcher ─────────────────────────────────────────────────────────────
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el)return;
+  const act=el.dataset.act; if(!act)return;
+  dispatch(act,el.dataset);
+});
+document.getElementById('app').addEventListener('keydown',e=>{
+  if(e.target.id==='p-name'&&e.key==='Enter')addP();
+  if(e.target.id==='g-name'&&e.key==='Enter')e.target.blur();
+  if(e.target.id==='bank-custom'&&e.key==='Enter')setBankCustom();
+});
+
+function dispatch(act,ds){
+  switch(act){
+    case 'go-creating':    goCreating(); break;
+    case 'go-setup':       goSetup(); break;
+    case 'go-back':        goBack(); break;
+    case 'set-bank':       setBank(parseInt(ds.v)); break;
+    case 'set-bank-custom':setBankCustom(); break;
+    case 'rand-bank':      randBank(); break;
+    case 'add-p':          addP(); break;
+    case 'rm-p':           rmP(ds.id); break;
+    case 'make-admin':     makeAdmin(ds.id); break;
+    case 'show-presets':   showPresetsModal(); break;
+    case 'show-custom':    showCustomModal(); break;
+    case 'edit-prob':      showEditProbModal(ds.id); break;
+    case 'rm-e':           rmE(ds.id); break;
+    case 'launch':         launch(); break;
+    case 'set-p':          setP(ds.id); break;
+    case 'open-bet':       openBet(ds.eid,ds.out); break;
+    case 'cancel-bet':     cancelBet(ds.eid); break;
+    case 'end-confirm':    showEndConfirm(); break;
+    case 'set-out':        setOut(ds.eid,ds.out); break;
+    case 'confirm-out':    confirmOut(); break;
+    case 'new-game':       newGame(); break;
+    case 'show-hist':      showHistDetail(parseInt(ds.idx)); break;
+    case 'delete-hist':    confirmDeleteHist(parseInt(ds.idx)); break;
+  }
+}
+
+// ── Setup/creating actions ─────────────────────────────────────────────────
+function goCreating(){ cr={name:'',bank:1000,participants:[],events:[]}; screen='creating'; render(); }
+function goSetup(){ screen='setup'; render(); }
+function addP(){
+  const inp=document.getElementById('p-name'); if(!inp)return;
+  const name=inp.value.trim().slice(0,35); if(!name)return;
+  const err=document.getElementById('p-err');
+  if(cr.participants.some(p=>p.name.toLowerCase()===name.toLowerCase())){
+    if(err)err.style.display='block';
+    inp.focus(); return;
+  }
+  if(err)err.style.display='none';
+  cr.participants.push({id:uid(),name}); inp.value='';
+  document.getElementById('p-list').innerHTML=renderPList(); refreshLaunchBtn(); inp.focus();
+}
+function rmP(id){ cr.participants=cr.participants.filter(p=>p.id!==id); document.getElementById('p-list').innerHTML=renderPList(); refreshLaunchBtn(); }
+function makeAdmin(id){
+  const idx=cr.participants.findIndex(p=>p.id===id); if(idx<=0)return;
+  const [p]=cr.participants.splice(idx,1); cr.participants.unshift(p);
+  document.getElementById('p-list').innerHTML=renderPList();
+}
+function setBank(v){
+  cr.bank=v;
+  document.querySelectorAll('.bank-opt').forEach(b=>b.classList.toggle('sel',parseInt(b.dataset.v)===v));
+  const h=document.getElementById('bank-hint'); if(h)h.innerHTML=`Выбрано: <b>${fmt(v)}</b> фишек`;
+  const ci=document.getElementById('bank-custom'); if(ci)ci.value='';
+}
+function setBankCustom(){
+  const ci=document.getElementById('bank-custom'); if(!ci)return;
+  let v=parseInt(ci.value); if(isNaN(v)||v<100){ci.focus();return;}
+  v=Math.round(v/10)*10;
+  cr.bank=v; document.querySelectorAll('.bank-opt').forEach(b=>b.classList.remove('sel'));
+  const h=document.getElementById('bank-hint'); if(h)h.innerHTML=`Выбрано: <b>${fmt(v)}</b> фишек`;
+  ci.value=v;
+}
+function randBank(){
+  const steps=Math.floor((10000-2000)/500)+1;
+  const v=2000+Math.floor(Math.random()*steps)*500; cr.bank=v;
+  document.querySelectorAll('.bank-opt').forEach(b=>b.classList.toggle('sel',parseInt(b.dataset.v)===v));
+  const h=document.getElementById('bank-hint'); if(h)h.innerHTML=`Выбрано: <b>${fmt(v)}</b> фишек 🎲`;
+  const ci=document.getElementById('bank-custom'); if(ci)ci.value='';
+}
+function rmE(id){ cr.events=cr.events.filter(e=>e.id!==id); document.getElementById('e-list').innerHTML=renderEList(); refreshLaunchBtn(); }
+function refreshLaunchBtn(){ const btn=document.querySelector('[data-act="launch"]'); if(btn)btn.disabled=!(cr.participants.length>=2&&cr.events.length>=1); }
+
+// ── Preset modal (accordion) ───────────────────────────────────────────────
+function showPresetsModal(){
+  const existIds=new Set(cr.events.filter(e=>e.type==='preset').map(e=>e.id));
+  const sel=new Set(existIds);
+  const expanded=new Set(); // all collapsed by default
+
+  function buildHtml(){
+    return`<div class="modal-title">Выбор событий</div>
+      ${PRESET_CATEGORIES.map(cat=>{
+        const catSel=cat.presets.filter(p=>sel.has(p.id)).length;
+        const allOn=catSel===cat.presets.length;
+        const isOpen=expanded.has(cat.id);
+        return`<div class="preset-cat-block">
+          <div class="preset-cat-hdr" data-catid="${cat.id}" data-toggle="cat">
+            <span class="preset-cat-name">${esc(cat.name)}</span>
+            <div class="preset-cat-right">
+              ${catSel>0?`<span class="preset-cat-count">${catSel}/${cat.presets.length}</span>`:''}
+              <button class="preset-cat-sel ${allOn?'all-on':''}" data-catid="${cat.id}" data-selall="1">${allOn?'Снять все':'Выбрать все'}</button>
+              <span class="preset-cat-arrow ${isOpen?'open':''}">▼</span>
+            </div>
+          </div>
+          <div class="preset-cat-body ${isOpen?'':'collapsed'}">
+            ${cat.presets.map(pe=>`
+              <div class="preset-item" data-pid="${pe.id}">
+                <div class="pcheck ${sel.has(pe.id)?'on':''}" id="pc-${pe.id}">${sel.has(pe.id)?'✓':''}</div>
+                <div class="preset-item-text">${esc(pe.name)}</div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="margin-top:16px;"><button class="btn btn-primary" id="presets-ok">Добавить выбранные</button></div>`;
+  }
+
+  function rerender(){ document.getElementById('modal-content').innerHTML=buildHtml(); attach(); }
+
+  function attach(){
+    // Category header toggle (but not the sel-all button)
+    document.querySelectorAll('[data-toggle="cat"]').forEach(hdr=>{
+      hdr.addEventListener('click',e=>{
+        if(e.target.closest('[data-selall]'))return; // handled separately
+        const catId=hdr.dataset.catid;
+        if(expanded.has(catId))expanded.delete(catId); else expanded.add(catId);
+        rerender();
+      });
+    });
+    // Select all per category
+    document.querySelectorAll('[data-selall]').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const catId=btn.dataset.catid;
+        const cat=PRESET_CATEGORIES.find(c=>c.id===catId);
+        const allOn=cat.presets.every(p=>sel.has(p.id));
+        cat.presets.forEach(p=>{ if(allOn)sel.delete(p.id); else sel.add(p.id); });
+        rerender();
+      });
+    });
+    // Individual items
+    document.querySelectorAll('.preset-item').forEach(item=>{
+      item.addEventListener('click',()=>{
+        const pid=item.dataset.pid;
+        if(sel.has(pid))sel.delete(pid); else sel.add(pid);
+        rerender();
+      });
+    });
+    document.getElementById('presets-ok')?.addEventListener('click',()=>{
+      cr.events=cr.events.filter(e=>e.type!=='preset');
+      PRESETS.forEach(pe=>{ if(sel.has(pe.id))cr.events.push({...pe,type:'preset',baseProbYes:pe.p}); });
+      document.getElementById('e-list').innerHTML=renderEList(); refreshLaunchBtn(); closeModal();
+    });
+  }
+
+  showModal(buildHtml());
+  attach();
+}
+
+// ── Custom / edit prob modal ───────────────────────────────────────────────
+function showCustomModal(existingId,existingName,existingProb){
+  const isEdit=!!existingId;
+  const initProb=existingProb!=null?Math.round(existingProb*100):50;
+  function previewHtml(prob){
+    const yes=Math.min(5,1/(prob/100)).toFixed(2), no=Math.min(5,1/(1-prob/100)).toFixed(2);
+    return`<div class="prob-preview">
+      <div class="prob-preview-side"><div class="prob-preview-coeff yes-c">×${yes}</div><div class="prob-preview-label">ДА</div></div>
+      <div class="prob-preview-side"><div class="prob-preview-coeff no-c">×${no}</div><div class="prob-preview-label">НЕТ</div></div>
+    </div><div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;">Коэффициент меняется по мере поступления ставок.</div>`;
+  }
+  const html=`<div class="modal-title">${isEdit?'Изменить вероятность':'Своё событие'}</div>
+    ${!isEdit?`<div class="modal-label">Название события</div>
+    <input class="form-input" id="ce-name" type="text" placeholder="Например: Кто-то уронит телефон" style="margin-bottom:6px;" value="${esc(existingName||'')}">
+    <div class="hint" id="ce-err" style="display:none;color:var(--danger);margin-bottom:12px;">Такое событие уже есть</div>`:
+    `<div style="font-size:14px;font-weight:600;margin-bottom:16px;">${esc(existingName||'')}</div>`}
+    <div class="modal-label">Насколько вероятно «ДА»?</div>
+    <div class="prob-quick">
+      <button class="prob-qbtn" data-prob="15">Маловероятно</button>
+      <button class="prob-qbtn" data-prob="50">Пополам</button>
+      <button class="prob-qbtn" data-prob="75">Скорее да</button>
+      <button class="prob-qbtn" data-prob="90">Почти точно</button>
+    </div>
+    <div class="prob-row">
+      <span style="font-size:12px;color:var(--muted);">5%</span>
+      <span class="prob-pct" id="prob-val">${initProb}%</span>
+      <span style="font-size:12px;color:var(--muted);">95%</span>
+    </div>
+    <input type="range" id="prob-sl" min="5" max="95" value="${initProb}" step="5">
+    <div id="prob-preview">${previewHtml(initProb)}</div>
+    <button class="btn btn-primary" id="ce-ok">${isEdit?'Сохранить':'Добавить событие'}</button>`;
+  showModal(html);
+  const sl=document.getElementById('prob-sl'),pv=document.getElementById('prob-val'),prev=document.getElementById('prob-preview');
+  sl.addEventListener('input',()=>{ pv.textContent=sl.value+'%'; prev.innerHTML=previewHtml(parseInt(sl.value)); });
+  document.querySelectorAll('.prob-qbtn').forEach(btn=>{
+    btn.addEventListener('click',()=>{ sl.value=btn.dataset.prob; pv.textContent=sl.value+'%'; prev.innerHTML=previewHtml(parseInt(sl.value)); });
+  });
+  document.getElementById('ce-ok').addEventListener('click',()=>{
+    const prob=parseInt(sl.value)/100;
+    if(isEdit){
+      const evt=cr.events.find(e=>e.id===existingId); if(evt)evt.baseProbYes=prob;
+      document.getElementById('e-list').innerHTML=renderEList(); closeModal();
+    } else {
+      const nameEl=document.getElementById('ce-name');
+      const name=nameEl?nameEl.value.trim():'';
+      if(!name){if(nameEl)nameEl.focus();return;}
+      const errEl=document.getElementById('ce-err');
+      if(cr.events.some(e=>e.name.toLowerCase()===name.toLowerCase())){
+        if(errEl)errEl.style.display='block';
+        nameEl.focus(); return;
+      }
+      if(errEl)errEl.style.display='none';
+      cr.events.push({id:uid(),type:'custom',name,baseProbYes:prob});
+      document.getElementById('e-list').innerHTML=renderEList(); refreshLaunchBtn(); closeModal();
+    }
+  });
+}
+function showEditProbModal(id){
+  const evt=cr.events.find(e=>e.id===id); if(!evt)return;
+  showCustomModal(id,evt.name,evt.baseProbYes);
+}
+
+// ── History detail + delete ────────────────────────────────────────────────
+function showHistDetail(idx){
+  const g=hist[idx]; if(!g)return;
+  const medals=['🥇','🥈','🥉'];
+  let activeTab='results';
+
+  function renderTab(){
+    if(activeTab==='results'){
+      return(g.results||[]).map((r,i)=>`
+        <div class="hist-res-item">
+          <div class="hist-res-rank">${medals[i]||(i+1)}</div>
+          <div class="hist-res-name">${esc(r.name)}</div>
+          <div>
+            ${r.final!=null?`<div class="hist-res-final">${fmt(r.final)}</div>`:''}
+            ${r.change!=null?`<div class="hist-res-change ${r.change>=0?'pos':'neg'}">${r.change>=0?'+':''}${fmt(r.change)}</div>`:''}
+          </div>
+        </div>`).join('')||`<div style="color:var(--muted);font-size:14px;">Нет данных</div>`;
+    } else {
+      if(!(g.events&&g.events.length)){
+        return`<div style="color:var(--muted);font-size:14px;">Данные ставок недоступны для старых игр</div>`;
+      }
+      return g.events.map(e=>{
+        const pool=e.pool||{yes:0,no:0};
+        const totalPool=(pool.yes||0)+(pool.no||0);
+        const winPool=e.outcome?(pool[e.outcome]||0):0;
+        const betRows=(e.bets||[]).map(b=>{
+          const win=e.outcome&&b.outcome===e.outcome;
+          const profit=win&&winPool>0?Math.round(b.amount*(totalPool/winPool-1)):0;
+          return`<div class="hist-bet-row">
+            <span class="hist-bet-name">${esc(b.name)}</span>
+            <span class="hist-bet-side ${b.outcome}">${b.outcome==='yes'?'ДА':'НЕТ'}</span>
+            <span class="hist-bet-amt">${fmt(b.amount)}&nbsp;фш</span>
+            ${e.outcome?`<span class="hist-bet-result ${win?'win':'lose'}">${win?'✓ +'+fmt(profit):'✗ −'+fmt(b.amount)}</span>`:''}
+          </div>`;
+        }).join('');
+        return`<div class="hist-evt-card">
+          <div class="hist-evt-name">
+            ${esc(e.name)}
+            ${e.outcome?`<span class="hist-evt-outcome ${e.outcome}">${e.outcome==='yes'?'ДА':'НЕТ'}</span>`:''}
+          </div>
+          <div class="hist-evt-bets">${betRows||`<span style="color:var(--muted);font-size:12px;">Ставок не было</span>`}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function buildHtml(){
+    return`<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+        <div>
+          <div class="modal-title" style="margin-bottom:2px;">${esc(g.name)}</div>
+          <div style="font-size:12px;color:var(--muted);">${fmtDate(g.createdAt)} · ${g.pCount} уч. · ${g.eCount} событ.</div>
+        </div>
+        <button class="delete-hist-btn" data-act="delete-hist" data-idx="${idx}">🗑 Удалить</button>
+      </div>
+      <div class="hist-tabs">
+        <button class="hist-tab ${activeTab==='results'?'active':''}" id="tab-results">Результаты</button>
+        <button class="hist-tab ${activeTab==='bets'?'active':''}" id="tab-bets">Ставки</button>
+      </div>
+      <div id="hist-tab-body">${renderTab()}</div>`;
+  }
+
+  showModal(buildHtml());
+
+  function attachTabs(){
+    document.getElementById('tab-results')?.addEventListener('click',()=>{
+      activeTab='results';
+      document.getElementById('modal-content').innerHTML=buildHtml();
+      attachTabs();
+    });
+    document.getElementById('tab-bets')?.addEventListener('click',()=>{
+      activeTab='bets';
+      document.getElementById('modal-content').innerHTML=buildHtml();
+      attachTabs();
+    });
+  }
+  attachTabs();
+}
+
+function confirmDeleteHist(idx){
+  const g=hist[idx]; if(!g)return;
+  showConfirm(`<div class="confirm-box">
+    <h3>Удалить игру?</h3>
+    <p>«${esc(g.name)}» будет удалена из истории навсегда.</p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="dc-no" style="flex:1">Отмена</button>
+      <button class="btn btn-danger" id="dc-yes" style="flex:1">Удалить</button>
+    </div>
+  </div>`);
+  document.getElementById('dc-no')?.addEventListener('click',()=>{ closeConfirm(); showHistDetail(idx); });
+  document.getElementById('dc-yes')?.addEventListener('click',()=>{
+    hist.splice(idx,1); savHist(); closeConfirm(); closeModal(); render();
+  });
+}
+
+// ── Game ───────────────────────────────────────────────────────────────────
+function launch(){
+  const nameEl=document.getElementById('g-name');
+  const gameName=(nameEl?nameEl.value.trim():'')||'Вечеринка';
+  game={
+    id:uid(), name:gameName, createdAt:Date.now(), startingBank:cr.bank,
+    participants:cr.participants.map((p,i)=>({id:p.id,name:p.name,isAdmin:i===0,bets:{}})),
+    events:cr.events.map(e=>({id:e.id,type:e.type,name:e.name,baseProbYes:e.baseProbYes,bets:{yes:0,no:0},outcome:null})),
+    curPid:cr.participants[0].id,
+  };
+  screen='playing'; render();
+}
+
+function setP(id){ game.curPid=id; render(); }
+
+function openBet(eid,out){
+  const evt=game.events.find(e=>e.id===eid), curP=game.participants.find(p=>p.id===game.curPid);
+  if(!evt||!curP)return;
+  const ab=availBal(curP.id);
+  if(ab<10){
+    showModal(`<div style="text-align:center;padding:16px 0 8px;">
+      <div style="font-size:36px;margin-bottom:12px;">😅</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Нет фишек</div>
+      <div style="color:var(--muted);font-size:14px;margin-bottom:24px;">У тебя не осталось фишек</div>
+      <button class="btn btn-secondary" id="no-chips-ok">Закрыть</button>
+    </div>`);
+    document.getElementById('no-chips-ok')?.addEventListener('click',closeModal); return;
+  }
+  const label=out==='yes'?'ДА':'НЕТ';
+  const co=coeffs(evt)[out];
+  const qAmts=[
+    {pct:'25%',v:Math.max(10,Math.round(ab*.25/10)*10)},
+    {pct:'50%',v:Math.max(10,Math.round(ab*.50/10)*10)},
+    {pct:'75%',v:Math.max(10,Math.round(ab*.75/10)*10)},
+    {pct:'ALL IN',v:Math.floor(ab/10)*10||ab},
+  ];
+  const def=qAmts[0].v;
+  showModal(`<div class="modal-event-name">${esc(evt.name)}</div>
+    <div class="modal-outcome-label">Ставка на: <span style="color:var(--${out}-active)">${label}</span></div>
+    <div class="modal-coeff ${out}">×${co.toFixed(2)}</div>
+    <div class="modal-label">Быстрая ставка</div>
+    <div class="quick-bets">${qAmts.map(q=>`<button class="qbet" data-qa="${q.v}"><span class="qbet-val">${fmt(q.v)}</span><span class="qbet-pct">${q.pct}</span></button>`).join('')}</div>
+    <div class="modal-label">Сумма ставки</div>
+    <input class="bet-inp" id="bet-inp" type="number" value="${def}" min="10" max="${ab}" step="10">
+    <div class="bet-avail">Доступно: <span>${fmt(ab)}</span> фишек</div>
+    <button class="btn btn-primary" id="place-bet-btn" style="color:#fff;">Поставить</button>`);
+  const inp=document.getElementById('bet-inp');
+  document.querySelectorAll('.qbet').forEach(btn=>btn.addEventListener('click',()=>{inp.value=btn.dataset.qa;}));
+  document.getElementById('place-bet-btn').addEventListener('click',()=>{
+    let amt=parseInt(inp.value); if(isNaN(amt)||amt<10)amt=10; if(amt>ab)amt=ab;
+    amt=Math.round(amt/10)*10; if(amt<10)amt=10;
+    placeBet(eid,out,amt); closeModal();
+  });
+}
+
+function placeBet(eid,out,amount){
+  const curP=game.participants.find(p=>p.id===game.curPid), evt=game.events.find(e=>e.id===eid);
+  if(!curP||!evt)return;
+  const prev=curP.bets[eid]; if(prev)evt.bets[prev.outcome]-=prev.amount;
+  curP.bets[eid]={outcome:out,amount};
+  evt.bets[out]=(evt.bets[out]||0)+amount; render();
+}
+
+function cancelBet(eid){
+  const curP=game.participants.find(p=>p.id===game.curPid), evt=game.events.find(e=>e.id===eid);
+  if(!curP||!evt)return;
+  const prev=curP.bets[eid]; if(!prev)return;
+  evt.bets[prev.outcome]-=prev.amount;
+  delete curP.bets[eid]; render();
+}
+
+function requireAdmin(){
+  if(currentIsAdmin())return true;
+  showModal(`<div style="text-align:center;padding:16px 0 8px;">
+    <div style="font-size:36px;margin-bottom:12px;">🔒</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Ты не организатор</div>
+    <div style="color:var(--muted);font-size:14px;margin-bottom:24px;">Завершить этот этап может только организатор игры</div>
+    <button class="btn btn-secondary" id="not-admin-ok">Понятно</button>
+  </div>`);
+  document.getElementById('not-admin-ok')?.addEventListener('click',closeModal);
+  return false;
+}
+
+function showEndConfirm(){
+  if(!requireAdmin())return;
+  showConfirm(`<div class="confirm-box">
+    <h3>Завершить вечеринку?</h3>
+    <p>Ставки будут заморожены. Вы отметите, что произошло, и увидите итоги.</p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="cc-no" style="flex:1">Отмена</button>
+      <button class="btn btn-danger" id="cc-yes" style="flex:1">Завершить</button>
+    </div>
+  </div>`);
+  document.getElementById('cc-no')?.addEventListener('click',closeConfirm);
+  document.getElementById('cc-yes')?.addEventListener('click',()=>{ closeConfirm(); markOut={}; screen='marking'; render(); });
+}
+
+function setOut(eid,out){
+  markOut[eid]=out;
+  document.querySelectorAll(`[data-act="set-out"][data-eid="${eid}"]`).forEach(btn=>btn.classList.toggle('sel',btn.dataset.out===out));
+  const allDone=game.events.every(e=>markOut[e.id]!=null);
+  const btn=document.querySelector('[data-act="confirm-out"]'); if(btn)btn.disabled=!allDone;
+}
+
+function confirmOut(){
+  if(!requireAdmin())return;
+  game.events.forEach(e=>{ e.outcome=markOut[e.id]||null; });
+  results=calcResults();
+  achievements=calcAchievements(results,game);
+  hist.unshift({
+    id:game.id, name:game.name, createdAt:game.createdAt,
+    pCount:game.participants.length, eCount:game.events.length,
+    results:results.map(r=>({name:r.name,final:r.final,change:r.change})),
+    events:game.events.map(e=>({
+      name:e.name, outcome:e.outcome, pool:{yes:e.bets.yes||0,no:e.bets.no||0},
+      bets:game.participants.filter(p=>p.bets[e.id]).map(p=>({
+        name:p.name, outcome:p.bets[e.id].outcome, amount:p.bets[e.id].amount
+      }))
+    })),
+  });
+  if(hist.length>20)hist=hist.slice(0,20);
+  savHist(); screen='results'; render();
+}
+
+function newGame(){ game=null; results=null; markOut={}; achievements={}; screen='setup'; render(); }
+
+function showModal(html){ document.getElementById('modal-content').innerHTML=html; document.getElementById('modal-wrap').classList.add('visible'); document.getElementById('overlay').classList.add('visible'); document.getElementById('overlay').onclick=closeModal; }
+function closeModal(){ document.getElementById('modal-wrap').classList.remove('visible'); document.getElementById('overlay').classList.remove('visible'); document.getElementById('overlay').onclick=null; }
+function showConfirm(html){ document.getElementById('confirm-content').innerHTML=html; document.getElementById('confirm-wrap').classList.add('visible'); document.getElementById('overlay').classList.add('visible'); document.getElementById('overlay').onclick=closeConfirm; }
+function closeConfirm(){ document.getElementById('confirm-wrap').classList.remove('visible'); document.getElementById('overlay').classList.remove('visible'); document.getElementById('overlay').onclick=null; }
+
+render();
+</script>
+</body>
+</html>
