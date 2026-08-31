@@ -1,1 +1,4 @@
 .DS_Store
+.claude/
+tg-bot/.wrangler/
+tg-bot/node_modules/
